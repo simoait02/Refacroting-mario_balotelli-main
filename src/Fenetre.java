@@ -1,174 +1,269 @@
-import FenetreFactory.FenetreFactory;
-import observer.TournamentButton;
-import java.awt.BorderLayout;
-import java.awt.CardLayout;
-import java.awt.Color;
-
-import java.awt.Dimension;
-import java.awt.event.ActionEvent;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionListener;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JPanel;
-
-
+import java.sql.*;
+import java.util.Vector;
 
 public class Fenetre extends JFrame {
 	private static final long serialVersionUID = 1L;
-	public JPanel c;
-	Statement s;
-	FenetreFactory fenetreFactory=new FenetreFactory();
-    private JList<String> list;
 
-    private boolean tournois_trace  = false;
-    private boolean equipes_trace   = false;
-	private boolean tours_trace     = false;
-	private boolean match_trace     = false;
-	private boolean resultats_trace = false;
+	// UI Components
+	private JPanel cardPanel;
+	private JLabel statutSelect;
+	private JButton btnTournois, btnParams, btnEquipes, btnTours, btnMatchs, btnResultats;
 
-	private final CardLayout fen;
-	final static String TOURNOIS = "Tournois";
-    final static String DETAIL   = "Paramètres du tournoi";
-    final static String EQUIPES  = "Equipes";
-    final static String TOURS    = "Tours";
-    final static String MATCHS   = "Matchs";
-    final static String RESULTATS= "Resultats";
-    public Tournoi t = null;
+	private JList<String> list;
+	private JButton creerTournoi, selectTournoi, deleteTournoi;
 
-    private final JLabel statut_slect;
-	private Page1 Page1;
-	private Page2 Page2;
-	private Page3 Page3;
-	private Page4 Page4;
-	private Page5 Page5;
-	private Page6 Page6;
+	// Database Statement
+	private final Statement statement;
 
-	public Fenetre(Statement st){
+	// Tournament Information
+	private Tournoi currentTournoi;
 
-		s = st;
-		this.setTitle("Gestion de tournoi de Belote");
-		setSize(800,400);
-		this.setVisible(true);
-		this.setLocationRelativeTo(this.getParent());
-		JPanel contenu = new JPanel();
-		contenu.setLayout(new BorderLayout());
-		this.setContentPane(contenu);
-		JPanel phaut = new JPanel();
-		contenu.add(phaut,BorderLayout.NORTH);
-		phaut.add(statut_slect = new JLabel());
-		this.setStatutSelect("Pas de tournoi sélectionné");
+	// Constants
+	private static final int BUTTON_WIDTH = 100;
+	private static final int BUTTON_HEIGHT = 30;
+	private static final String DEFAULT_STATUT = "Statut : ";
+	private static final String DEFAULT_TITLE = "Gestion de tournoi de Belote";
+	private static final String TOURNOIS = "TOURNOIS";
 
-		JPanel pgauche = new JPanel();
-		pgauche.setBackground(Color.RED);
-		pgauche.setPreferredSize(new Dimension(130,0));
-		contenu.add(pgauche,BorderLayout.WEST);
-
-
-		int taille_boutons = 100;
-		int hauteur_boutons = 30;
-		fenetreFactory.createButton("createTournoi",new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				Tournoi.creerTournoi(Fenetre.this.s);
-				Fenetre.this.Page1.tracerSelectTournoi(fenetreFactory);
-			}
-		});
-		fenetreFactory.createButton("deleteTournoi",new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				Tournoi.deleteTournoi(Fenetre.this.s, Fenetre.this.list.getSelectedValue());
-				Fenetre.this.Page1.tracerSelectTournoi(fenetreFactory);
-			}
-		});
-		fenetreFactory.createButton("selectTournoi",new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				String nt = Fenetre.this.list.getSelectedValue();
-				Fenetre.this.t = new Tournoi(nt, Fenetre.this.s);
-				Fenetre.this.Page2.tracerDetailsTournoi(t,fen);
-				Fenetre.this.setStatutSelect("Tournoi \" " + nt + " \"");
-
-			}
-		});
-		fenetreFactory.createButton("Tournois",new Dimension(taille_boutons,hauteur_boutons),new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				Page1.tracerSelectTournoi(fenetreFactory);
-			}
-		});
-		fenetreFactory.createButton("Paramètres",new Dimension(taille_boutons,hauteur_boutons),new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				Page4.tracer_tours_tournoi(t,fenetreFactory,fen);
-			}
-		});
-		fenetreFactory.createButton("Equipes",new Dimension(taille_boutons,hauteur_boutons),new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				Page2.tracerDetailsTournoi(t,fen);
-			}
-		});
-		fenetreFactory.createButton("Tours",new Dimension(taille_boutons,hauteur_boutons),new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				Page3.tracerTournoiEquipes(fenetreFactory,t);
-			}
-		});
-		fenetreFactory.createButton("Matchs",new Dimension(taille_boutons,hauteur_boutons),new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				Page5.tracerTournoiMatchs(t);
-			}
-		});
-		fenetreFactory.createButton("Resultats",new Dimension(taille_boutons,hauteur_boutons),new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				Page6.tracer_tournoi_resultats(t);
-			}
-		});
-
-		pgauche.add(fenetreFactory.getButton("Tournois"));
-		pgauche.add(fenetreFactory.getButton("Paramètres"));
-		pgauche.add(fenetreFactory.getButton("Equipes"));
-		pgauche.add(fenetreFactory.getButton("Tours"));
-		pgauche.add(fenetreFactory.getButton("Matchs"));
-		pgauche.add(fenetreFactory.getButton("Resultats"));
-		TournamentButton tournamentButton= new TournamentButton();
-		tournamentButton.addObserver(fenetreFactory.getButton("Tournois"),-1);
-		tournamentButton.addObserver(fenetreFactory.getButton("Paramètres"),-1);
-		tournamentButton.addObserver(fenetreFactory.getButton("Equipes"),-1);
-		tournamentButton.addObserver(fenetreFactory.getButton("Tours"),2);
-		tournamentButton.addObserver(fenetreFactory.getButton("Matchs"),2);
-		tournamentButton.addObserver(fenetreFactory.getButton("Resultats"),2);
-		fen = new CardLayout();
-		c = new JPanel(fen);
-		contenu.add(c,BorderLayout.CENTER);
-		Page1.tracerSelectTournoi(fenetreFactory);
+	public Fenetre(Statement statement) {
+		this.statement = statement;
+		setupUI();
+		setupActions();
+		updateStatus("Pas de tournoi sélectionné");
+		tracerSelectTournoi();
 	}
 
-	public void setStatutSelect(String t){
-        String statut_deft = "Gestion de tournois de Belote v1.0 - ";
-        statut_slect.setText(statut_deft + t);
+	private void setupUI() {
+		setTitle(DEFAULT_TITLE);
+		setSize(800, 400);
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		setLocationRelativeTo(null);
+
+		JPanel contentPanel = new JPanel(new BorderLayout());
+		setContentPane(contentPanel);
+
+		setupNorthPanel(contentPanel);
+		setupWestPanel(contentPanel);
+		setupCenterPanel(contentPanel);
 	}
 
-    JLabel match_statut;
-    JButton match_valider;
+	private void setupNorthPanel(JPanel parent) {
+		JPanel northPanel = new JPanel();
+		statutSelect = new JLabel();
+		northPanel.add(statutSelect);
+		parent.add(northPanel, BorderLayout.NORTH);
+	}
 
+	private void setupWestPanel(JPanel parent) {
+		JPanel westPanel = new JPanel();
+		westPanel.setBackground(Color.RED);
+		westPanel.setPreferredSize(new Dimension(130, 0));
+		parent.add(westPanel, BorderLayout.WEST);
 
+		btnTournois = createButton("Tournois", westPanel);
+		btnParams = createButton("Paramètres", westPanel);
+		btnEquipes = createButton("Équipes", westPanel);
+		btnTours = createButton("Tours", westPanel);
+		btnMatchs = createButton("Matchs", westPanel);
+		btnResultats = createButton("Résultats", westPanel);
+	}
 
-	private void majStatutM(){
-		int total=-1, termines=-1;
-		try {
-			ResultSet rs = s.executeQuery("Select count(*) as total, (Select count(*) from matchs m2  WHERE m2.id_tournoi = m.id_tournoi  AND m2.termine='oui' ) as termines from matchs m  WHERE m.id_tournoi=" + this.t.id_tournoi +" GROUP by id_tournoi ;");
-			rs.next();
-			total    = rs.getInt(1);
-			termines = rs.getInt(2);
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return ;
+	private void setupCenterPanel(JPanel parent) {
+		cardPanel = new JPanel(new CardLayout());
+		parent.add(cardPanel, BorderLayout.CENTER);
+	}
+
+	private JButton createButton(String text, JPanel parent) {
+		JButton button = new JButton(text);
+		button.setPreferredSize(new Dimension(BUTTON_WIDTH, BUTTON_HEIGHT));
+		parent.add(button);
+		return button;
+	}
+
+	private void setupActions() {
+		btnTournois.addActionListener(e -> tracerSelectTournoi());
+		btnParams.addActionListener(e -> tracerDetailsTournoi());
+		btnEquipes.addActionListener(e -> tracerEquipesTournoi());
+		btnTours.addActionListener(e -> tracerToursTournoi());
+		btnMatchs.addActionListener(e -> tracerMatchsTournoi());
+		btnResultats.addActionListener(e -> tracerResultatsTournoi());
+	}
+
+	private void updateStatus(String text) {
+		statutSelect.setText(DEFAULT_STATUT + text);
+	}
+
+	private void updateButtonStates() {
+		boolean tournoiSelected = currentTournoi != null;
+
+		btnTournois.setEnabled(true);
+		btnParams.setEnabled(tournoiSelected);
+		btnEquipes.setEnabled(tournoiSelected);
+		btnTours.setEnabled(tournoiSelected && currentTournoi.getStatut() >= 2);
+		btnMatchs.setEnabled(tournoiSelected && currentTournoi.getStatut() >= 2 && currentTournoi.getNbTours() > 0);
+
+		if (tournoiSelected && currentTournoi.getStatut() == 2) {
+			try {
+				boolean allMatchesFinished = areAllMatchesFinished(currentTournoi.getId());
+				btnResultats.setEnabled(allMatchesFinished);
+			} catch (SQLException ex) {
+				ex.printStackTrace();
+				btnResultats.setEnabled(false);
+			}
+		} else {
+			btnResultats.setEnabled(false);
 		}
-		match_statut.setText(termines + "/" + total + " matchs terminés");
-		match_valider.setEnabled(total == termines);
+	}
+
+	private boolean areAllMatchesFinished(int tournoiId) throws SQLException {
+		String query = """
+                SELECT COUNT(*) AS total, 
+                       SUM(CASE WHEN termine = 'oui' THEN 1 ELSE 0 END) AS termines 
+                FROM matchs 
+                WHERE id_tournoi = ?;
+                """;
+		try (PreparedStatement ps = statement.getConnection().prepareStatement(query)) {
+			ps.setInt(1, tournoiId);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				int total = rs.getInt("total");
+				int termines = rs.getInt("termines");
+				return total > 0 && total == termines;
+			}
+		}
+		return false;
+	}
+
+	public void tracerSelectTournoi() {
+		currentTournoi = null; // Reset the selected tournament
+		updateButtonStates();
+		updateStatus("Sélection d'un tournoi");
+
+		Vector<String> tournamentNames = fetchTournamentNames();
+
+		if (isTournamentPanelTraced()) {
+			updateTournamentList(tournamentNames);
+			return;
+		}
+
+		JPanel tournamentPanel = createTournamentPanel(tournamentNames);
+		cardPanel.add(tournamentPanel, TOURNOIS);
+
+		((CardLayout) cardPanel.getLayout()).show(cardPanel, TOURNOIS);
+	}
+
+	private Vector<String> fetchTournamentNames() {
+		Vector<String> tournamentNames = new Vector<>();
+		try (ResultSet rs = statement.executeQuery("SELECT * FROM tournois")) {
+			while (rs.next()) {
+				tournamentNames.add(rs.getString("nom_tournoi"));
+			}
+		} catch (SQLException e) {
+			JOptionPane.showMessageDialog(this, "Erreur lors de la requête : " + e.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+		}
+		return tournamentNames;
+	}
+
+	private boolean isTournamentPanelTraced() {
+		return cardPanel.getComponentCount() > 0;
+	}
+
+	private void updateTournamentList(Vector<String> tournamentNames) {
+		list.setListData(tournamentNames);
+		boolean hasTournaments = !tournamentNames.isEmpty();
+		selectTournoi.setEnabled(hasTournaments);
+		deleteTournoi.setEnabled(hasTournaments);
+
+		if (hasTournaments) {
+			list.setSelectedIndex(0);
+		}
+
+		((CardLayout) cardPanel.getLayout()).show(cardPanel, TOURNOIS);
+	}
+
+	private JPanel createTournamentPanel(Vector<String> tournamentNames) {
+		JPanel tournamentPanel = new JPanel();
+		tournamentPanel.setLayout(new BoxLayout(tournamentPanel, BoxLayout.Y_AXIS));
+
+		JTextArea headerText = new JTextArea("Gestion des tournois\nXXXXX XXXXXXXX, juillet 2012");
+		headerText.setAlignmentX(Component.CENTER_ALIGNMENT);
+		headerText.setEditable(false);
+		tournamentPanel.add(headerText);
+
+		populateTournamentList(tournamentNames, tournamentPanel);
+		setupTournamentButtons(tournamentPanel,tournamentNames);
+
+		return tournamentPanel;
+	}
+
+	private void populateTournamentList(Vector<String> tournamentNames, JPanel tournamentPanel) {
+		list = new JList<>(tournamentNames);
+		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		JScrollPane listScroller = new JScrollPane(list);
+		listScroller.setPreferredSize(new Dimension(250, 180));
+		tournamentPanel.add(new JLabel("Liste des tournois"));
+		tournamentPanel.add(listScroller);
+	}
+
+	private void setupTournamentButtons(JPanel tournamentPanel,Vector<String> tournamentNames) {
+		JPanel buttonPanel = new JPanel();
+		creerTournoi = createActionButton("Créer un nouveau tournoi", e -> {
+			Tournoi.creerTournoi(statement);
+			tracerSelectTournoi();
+		}, buttonPanel);
+
+		selectTournoi = createActionButton("Sélectionner le tournoi", e -> {
+			String selectedTournament = list.getSelectedValue();
+			if (selectedTournament != null) {
+				currentTournoi = new Tournoi(selectedTournament, statement);
+				tracerDetailsTournoi();
+				updateStatus("Tournoi \"" + selectedTournament + "\"");
+			}
+		}, buttonPanel);
+
+		deleteTournoi = createActionButton("Supprimer le tournoi", e -> {
+			String selectedTournament = list.getSelectedValue();
+			if (selectedTournament != null) {
+				Tournoi.deleteTournoi(statement, selectedTournament);
+				tracerSelectTournoi();
+			}
+		}, buttonPanel);
+
+		boolean hasTournaments = !tournamentNames.isEmpty();
+		selectTournoi.setEnabled(hasTournaments);
+		deleteTournoi.setEnabled(hasTournaments);
+
+		tournamentPanel.add(buttonPanel);
+	}
+
+	private JButton createActionButton(String text, ActionListener listener, JPanel parent) {
+		JButton button = new JButton(text);
+		button.setPreferredSize(new Dimension(150, 30));
+		button.addActionListener(listener);
+		parent.add(button);
+		return button;
+	}
+
+	private void tracerDetailsTournoi() {
+		// Logic to display tournament details
+	}
+
+	private void tracerEquipesTournoi() {
+		// Logic to display tournament teams
+	}
+
+	private void tracerToursTournoi() {
+		// Logic to display tournament rounds
+	}
+
+	private void tracerMatchsTournoi() {
+		// Logic to display tournament matches
+	}
+
+	private void tracerResultatsTournoi() {
+		// Logic to display tournament results
 	}
 }

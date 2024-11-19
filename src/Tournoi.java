@@ -60,6 +60,10 @@ public class Tournoi {
 		
 	}
 
+	public int getId() {
+		return id_tournoi;
+	}
+
 	public void majEquipes(){
 		dataeq = new Vector<Equipe>();
 		ideqs = new Vector<Integer>();
