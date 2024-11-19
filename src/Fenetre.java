@@ -1,5 +1,7 @@
 import javax.swing.*;
+import javax.swing.table.AbstractTableModel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.*;
 import java.util.Vector;
@@ -247,12 +249,208 @@ public class Fenetre extends JFrame {
 		return button;
 	}
 
-	private void tracerDetailsTournoi() {
-		// Logic to display tournament details
+	private boolean equipes_trace = false;
+	private JPanel eq_p;
+	private JTable eq_jt;
+	private AbstractTableModel eq_modele;
+	private JButton eq_ajouter, eq_supprimer, eq_valider;
+
+	public void tracerEquipesTournoi() {
+		if (currentTournoi == null) {
+			JOptionPane.showMessageDialog(this, "Aucun tournoi sélectionné !", "Erreur", JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+
+		updateButtonStates();
+
+		if (equipes_trace) {
+			// Update the team data if already traced
+			currentTournoi.majEquipes();
+			eq_modele.fireTableDataChanged();
+		} else {
+			equipes_trace = true;
+
+			// Create the main panel for teams
+			eq_p = new JPanel();
+			eq_p.setLayout(new BoxLayout(eq_p, BoxLayout.Y_AXIS));
+			eq_p.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+			JLabel eq_desc = new JLabel("Équipes du tournoi");
+			eq_p.add(eq_desc);
+
+			// Define the table model for the teams
+			eq_modele = new AbstractTableModel() {
+				private static final long serialVersionUID = 1L;
+
+				@Override
+				public Object getValueAt(int rowIndex, int columnIndex) {
+					Equipe equipe = currentTournoi.getEquipe(rowIndex);
+					switch (columnIndex) {
+						case 0:
+							return equipe.getNum();
+						case 1:
+							return equipe.getEq1();
+						case 2:
+							return equipe.getEq2();
+						default:
+							return "??";
+					}
+				}
+
+				@Override
+				public String getColumnName(int column) {
+					return switch (column) {
+						case 0 -> "Numéro d'équipe";
+						case 1 -> "Joueur 1";
+						case 2 -> "Joueur 2";
+						default -> "??";
+					};
+				}
+
+				@Override
+				public int getRowCount() {
+					return currentTournoi != null ? currentTournoi.getNbEquipes() : 0;
+				}
+
+				@Override
+				public int getColumnCount() {
+					return 3;
+				}
+
+				@Override
+				public boolean isCellEditable(int rowIndex, int columnIndex) {
+					return columnIndex > 0 && currentTournoi.getStatut() == 0; // Editable if in initial state
+				}
+
+				@Override
+				public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
+					Equipe equipe = currentTournoi.getEquipe(rowIndex);
+					if (columnIndex == 1) {
+						equipe.setEq1((String) aValue);
+					} else if (columnIndex == 2) {
+						equipe.setEq2((String) aValue);
+					}
+					String updateQuery = "UPDATE equipes SET joueur1 = ?, joueur2 = ? WHERE id = ?";
+					try (PreparedStatement ps = statement.getConnection().prepareStatement(updateQuery)) {
+						ps.setString(1, equipe.getEq1());
+						ps.setString(2, equipe.getEq2());
+						ps.setInt(3, equipe.getId()); // Assuming each team has a unique ID
+						ps.executeUpdate();
+					} catch (SQLException ex) {
+						JOptionPane.showMessageDialog(Fenetre.this, "Erreur lors de la mise à jour de l'équipe : " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+					}
+
+					fireTableDataChanged();
+				}
+			};
+
+			// Create and add the table
+			eq_jt = new JTable(eq_modele);
+			eq_p.add(new JScrollPane(eq_jt));
+
+			// Add action buttons for managing teams
+			JPanel buttonPanel = new JPanel();
+
+			eq_ajouter = createActionButton("Ajouter une équipe", e -> {
+				currentTournoi.ajouterEquipe();
+				eq_modele.fireTableDataChanged();
+				updateTeamButtonStates();
+			}, buttonPanel);
+
+			eq_supprimer = createActionButton("Supprimer une équipe", e -> {
+				int selectedRow = eq_jt.getSelectedRow();
+				if (selectedRow != -1) {
+					currentTournoi.supprimerEquipe(selectedRow);
+					eq_modele.fireTableDataChanged();
+					updateTeamButtonStates();
+				}
+			}, buttonPanel);
+
+			eq_valider = createActionButton("Valider les équipes", e -> {
+				if (currentTournoi.getNbEquipes() % 2 != 0) {
+					JOptionPane.showMessageDialog(this, "Le nombre d'équipes doit être pair pour continuer.", "Erreur", JOptionPane.ERROR_MESSAGE);
+				} else {
+					currentTournoi.genererMatchs();
+					updateButtonStates();
+					tracerToursTournoi();
+				}
+			}, buttonPanel);
+
+			eq_p.add(buttonPanel);
+
+			cardPanel.add(eq_p, "EQUIPES");
+		}
+
+		// Update button states
+		updateTeamButtonStates();
+
+		// Show the panel
+		((CardLayout) cardPanel.getLayout()).show(cardPanel, "EQUIPES");
 	}
 
-	private void tracerEquipesTournoi() {
-		// Logic to display tournament teams
+	// Helper to manage button states for teams
+	private void updateTeamButtonStates() {
+		boolean hasTeams = currentTournoi.getNbEquipes() > 0;
+		eq_ajouter.setEnabled(currentTournoi.getStatut() == 0);
+		eq_supprimer.setEnabled(hasTeams && currentTournoi.getStatut() == 0);
+		eq_valider.setEnabled(hasTeams && currentTournoi.getNbEquipes() % 2 == 0 && currentTournoi.getStatut() == 1);
+	}
+
+	private boolean details_trace = false;
+	private JLabel detailt_nom, detailt_statut, detailt_nbtours;
+
+	private void tracerDetailsTournoi() {
+		if (currentTournoi == null) {
+			JOptionPane.showMessageDialog(this, "Aucun tournoi sélectionné !", "Erreur", JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+
+		updateButtonStates();
+
+		if (details_trace) {
+			// If the tournament details are already traced, just update the labels
+			detailt_nom.setText(currentTournoi.getNom());
+			detailt_statut.setText(currentTournoi.getNStatut());
+			detailt_nbtours.setText(Integer.toString(currentTournoi.getNbTours()));
+		} else {
+			// If the tournament details have not been traced yet, set them up
+			details_trace = true;
+
+			// Create the panel for displaying tournament details
+			JPanel detailsPanel = new JPanel();
+			detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
+
+			// Create a label for the tournament header
+			JLabel headerLabel = new JLabel("Détails du tournoi");
+			detailsPanel.add(headerLabel);
+
+			// Create a panel to organize the labels in a grid layout
+			JPanel infoPanel = new JPanel(new GridLayout(3, 2));
+
+			// Tournament name
+			detailt_nom = new JLabel(currentTournoi.getNom());
+			infoPanel.add(new JLabel("Nom du tournoi"));
+			infoPanel.add(detailt_nom);
+
+			// Tournament status
+			detailt_statut = new JLabel(currentTournoi.getNStatut());
+			infoPanel.add(new JLabel("Statut"));
+			infoPanel.add(detailt_statut);
+
+			// Number of rounds
+			detailt_nbtours = new JLabel(Integer.toString(currentTournoi.getNbTours()));
+			infoPanel.add(new JLabel("Nombre de tours"));
+			infoPanel.add(detailt_nbtours);
+
+			// Add the info panel to the details panel
+			detailsPanel.add(infoPanel);
+
+			// Add the details panel to the cardPanel under the "DETAIL" identifier
+			cardPanel.add(detailsPanel, "DETAIL");
+
+			// Set the cardLayout to show the tournament details view
+			((CardLayout) cardPanel.getLayout()).show(cardPanel, "DETAIL");
+		}
 	}
 
 	private void tracerToursTournoi() {
