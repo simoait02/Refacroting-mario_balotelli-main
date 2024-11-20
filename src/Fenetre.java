@@ -263,7 +263,7 @@ public class Fenetre extends JFrame {
 		updateButtonStates();
 
 		if (equipes_trace) {
-			currentTournoi.updateEquipe();
+			currentTournoi.updateData();
 			eq_modele.fireTableDataChanged();
 		} else {
 			equipes_trace = true;
@@ -412,8 +412,8 @@ public class Fenetre extends JFrame {
 		updateButtonStates();
 
 		if (details_trace) {
-			detailt_nom.setText(currentTournoi.getNom());
-			detailt_statut.setText(currentTournoi.getNStatut());
+			detailt_nom.setText(currentTournoi.getNomTournoi());
+			detailt_statut.setText(currentTournoi.getStatutNom());
 			detailt_nbtours.setText(Integer.toString(currentTournoi.getNbTours()));
 		} else {
 			details_trace = false;
@@ -426,11 +426,11 @@ public class Fenetre extends JFrame {
 
 			JPanel infoPanel = new JPanel(new GridLayout(3, 2));
 
-			detailt_nom = new JLabel(currentTournoi.getNom());
+			detailt_nom = new JLabel(currentTournoi.getNomTournoi());
 			infoPanel.add(new JLabel("Nom du tournoi"));
 			infoPanel.add(detailt_nom);
 
-			detailt_statut = new JLabel(currentTournoi.getNStatut());
+			detailt_statut = new JLabel(currentTournoi.getStatutNom());
 			infoPanel.add(new JLabel("Statut"));
 			infoPanel.add(detailt_statut);
 
@@ -571,7 +571,7 @@ public class Fenetre extends JFrame {
 	}
 
 	private void refreshMatchData() {
-		currentTournoi.majMatch();
+		currentTournoi.updateData();
 		match_modele.fireTableDataChanged();
 		majStatutM();
 	}
@@ -658,7 +658,7 @@ public class Fenetre extends JFrame {
 						match.score2 = Integer.parseInt(aValue.toString());
 					}
 
-					currentTournoi.majMatch(row);
+					currentTournoi.updateMatch(row);
 					fireTableDataChanged();
 					Fenetre.this.updateButtonStates();
 				} catch (NumberFormatException e) {
