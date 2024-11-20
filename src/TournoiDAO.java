@@ -4,7 +4,6 @@ import java.util.*;
 
 public class TournoiDAO {
     private final Statement statement;
-    Tournoi tournoi =new Tournoi();
     public TournoiDAO(Statement statement) {
         this.statement = statement;
     }
@@ -30,13 +29,12 @@ public class TournoiDAO {
 
 
     public Map<String, Vector<?>> getUpdateData(int idTournoi) {
-        Map<String, Vector<?>> result = new HashMap<>(); // To store both Equipe and MatchM data
+        Map<String, Vector<?>> result = new HashMap<>();
         Vector<Equipe> dataEquipe = new Vector<>();
         Vector<Integer> ideqs = new Vector<>();
         Vector<MatchM> dataMatch = new Vector<>();
 
         try {
-            // Fetch Equipe data
             ResultSet rsEquipe = statement.executeQuery(
                     "SELECT * FROM equipes WHERE id_tournoi = " + idTournoi + " ORDER BY num_equipe;"
             );
@@ -67,7 +65,6 @@ public class TournoiDAO {
             }
             rsMatch.close();
 
-            // Store data in the map
             result.put("equipes", dataEquipe);
             result.put("equipesIds", ideqs);
             result.put("matchs", dataMatch);
@@ -81,7 +78,7 @@ public class TournoiDAO {
     public void genererMatchs(Tournoi tournoi) {
         int nbt = 1;
 
-        System.out.println("Nombre d'�quipes : " + tournoi.getNbEquipes());
+        System.out.println("Nombre d'equipes : " + tournoi.getNbEquipes());
         System.out.println("Nombre de tours  : " + nbt);
         String req = "INSERT INTO matchs ( id_match, id_tournoi, num_tour, equipe1, equipe2, termine ) VALUES\n";
         Vector<Vector<Match>> ms;
@@ -102,7 +99,7 @@ public class TournoiDAO {
             statement.executeUpdate("UPDATE tournois SET statut=2 WHERE id_tournoi=" + tournoi.getId() + ";");
             tournoi.setStatut(2);
         }catch(SQLException e){
-            System.out.println("Erreur validation �quipes : " + e.getMessage());
+            System.out.println("Erreur validation equipes : " + e.getMessage());
         }
     }
 
@@ -122,7 +119,7 @@ public class TournoiDAO {
         } catch (SQLException e) {
             System.out.println("Erreur lors de la récupération du nombre maximum de tours: " + e.getMessage());
         }
-        return -1; // Error case
+        return -1;
     }
 
     protected boolean createInitialMatches(int nbtoursav, Tournoi tournoi) {
@@ -240,7 +237,6 @@ public class TournoiDAO {
     public void supprimerTour(int idTournoi) {
         int nbtoursav = -1;
 
-        // Step 1: Fetch the maximum tour number for the tournament
         String getMaxTourQuery = "SELECT MAX(num_tour) FROM matchs WHERE id_tournoi = ?";
         try (PreparedStatement psGetMaxTour = statement.getConnection().prepareStatement(getMaxTourQuery)) {
             psGetMaxTour.setInt(1, idTournoi);
@@ -254,13 +250,11 @@ public class TournoiDAO {
             return;
         }
 
-        // If no rounds exist, exit the method
         if (nbtoursav == -1) {
             System.out.println("No tours found for tournament ID: " + idTournoi);
             return;
         }
 
-        // Step 2: Delete the latest tour
         String deleteTourQuery = "DELETE FROM matchs WHERE id_tournoi = ? AND num_tour = ?";
         try (PreparedStatement psDeleteTour = statement.getConnection().prepareStatement(deleteTourQuery)) {
             psDeleteTour.setInt(1, idTournoi);
@@ -288,42 +282,39 @@ public class TournoiDAO {
                 PreparedStatement psDeleteEquipe = s2.getConnection().prepareStatement(deleteEquipeQuery);
                 PreparedStatement psDeleteTournoi = s2.getConnection().prepareStatement(deleteTournoiQuery)
         ) {
-            // Step 1: Retrieve the tournament ID
             psGetId.setString(1, nomtournoi);
             ResultSet rs = psGetId.executeQuery();
             if (!rs.next()) {
                 System.out.println("Tournament not found: " + nomtournoi);
-                return -1;  // Tournament not found
+                return -1;
             }
 
             int idt = rs.getInt(1);
             rs.close();
             System.out.println("ID of the tournament to delete: " + idt);
 
-            // Step 2: Delete associated matches, teams, and the tournament
             psDeleteMatch.setInt(1, idt);
             psDeleteEquipe.setInt(1, idt);
             psDeleteTournoi.setInt(1, idt);
 
-            // Execute deletion queries
             psDeleteMatch.executeUpdate();
             psDeleteEquipe.executeUpdate();
             int rowsDeleted = psDeleteTournoi.executeUpdate();
 
             if (rowsDeleted > 0) {
                 System.out.println("Tournament deleted successfully.");
-                return 1;  // Success
+                return 1;
             } else {
                 System.out.println("Failed to delete tournament.");
-                return 0;  // Failure
+                return 0;
             }
 
         } catch (SQLException e) {
             System.out.println("SQL error during tournament deletion: " + e.getMessage());
-            return -2;  // SQL error
+            return -2;
         } catch (Exception e) {
             System.out.println("Unknown error occurred during tournament deletion.");
-            return -3;  // Unknown error
+            return -3;
         }
     }
 
@@ -335,62 +326,55 @@ public class TournoiDAO {
                 JOptionPane.PLAIN_MESSAGE
         );
 
-        // Check if the user canceled the input
         if (tournoiName == null || tournoiName.trim().isEmpty()) {
-            return 1; // Cancelled or empty input
+            return 1;
         }
 
-        // Escape special characters in the tournament name
         try {
             tournoiName = mysql_real_escape_string(tournoiName);
             if (tournoiName.length() < 3) {
                 JOptionPane.showMessageDialog(null, "Le tournoi n'a pas été créé. Nom trop court.");
-                return 2; // Name is too short
+                return 2;
             }
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null, "Erreur lors de la validation du nom.");
-            return 3; // Error in name validation
+            return 3;
         }
 
-        // Check for invalid characters in the name
         if (tournoiName.isEmpty()) {
             JOptionPane.showMessageDialog(null, "Le tournoi n'a pas été créé. Ne pas mettre de caractères spéciaux ou accents dans le nom.");
-            return 2; // Invalid characters in name
+            return 2;
         }
 
-        // Check if a tournament with the same name already exists
         String queryCheckExists = "SELECT id_tournoi FROM tournois WHERE nom_tournoi = ?";
         try (PreparedStatement psCheck = s2.getConnection().prepareStatement(queryCheckExists)) {
             psCheck.setString(1, tournoiName);
             ResultSet rs = psCheck.executeQuery();
             if (rs.next()) {
                 JOptionPane.showMessageDialog(null, "Le tournoi n'a pas été créé. Un tournoi du même nom existe déjà.");
-                return 2; // Tournament with the same name exists
+                return 2;
             }
         } catch (SQLException e) {
             System.out.println("Erreur lors de la vérification de l'existence du tournoi: " + e.getMessage());
-            return 4; // Error checking if tournament exists
+            return 4;
         }
 
-        // Proceed to insert the new tournament
         String queryInsert = "INSERT INTO tournois (id_tournoi, nb_matchs, nom_tournoi, statut) VALUES (NULL, 10, ?, 0)";
         try (PreparedStatement psInsert = s2.getConnection().prepareStatement(queryInsert)) {
             psInsert.setString(1, tournoiName);
             psInsert.executeUpdate();
             JOptionPane.showMessageDialog(null, "Tournoi créé avec succès.");
-            return 0; // Success
+            return 0;
         } catch (SQLException e) {
             System.out.println("Erreur lors de l'insertion du tournoi: " + e.getMessage());
-            return 5; // Error inserting the tournament
+            return 5;
         }
     }
 
     public void ajouterEquipe(String joueur1, String joueur2,Tournoi tournoi) {
-        // Determine the next available team number
-        int a_aj = tournoi.getDataEquipe().size() + 1;  // Assuming the size of dataEquipe is a good indicator of the team number
+        int a_aj = tournoi.getDataEquipe().size() + 1;
 
-        // Try to find the next available team number that is not in idEquipes
         for (int i = 1; i <= tournoi.getDataEquipe().size(); i++) {
             if (!tournoi.getIdEquipes().contains(i)) {
                 a_aj = i;
@@ -398,7 +382,6 @@ public class TournoiDAO {
             }
         }
 
-        // Insert the new team into the 'equipes' table
         String query = "INSERT INTO equipes (id_equipe, num_equipe, id_tournoi, nom_j1, nom_j2) VALUES (NULL, ?, ?, ?, ?)";
         try (PreparedStatement ps = statement.getConnection().prepareStatement(query)) {
             // Set the values dynamically
@@ -409,7 +392,7 @@ public class TournoiDAO {
 
             // Execute the update
             ps.executeUpdate();
-            tournoi.updateData();  // Update the data after inserting the new team
+            tournoi.updateData();
         } catch (SQLException e) {
             System.out.println("Erreur lors de l'ajout de l'équipe : " + e.getMessage());
             e.printStackTrace();
@@ -418,17 +401,14 @@ public class TournoiDAO {
 
 
     public void updateMatch(int index,Tournoi tournoi) {
-        MatchM match = tournoi.getMatch(index);  // Call getMatch once and store the result in a variable
+        MatchM match = tournoi.getMatch(index);
 
-        // Determine whether the match is finished
         String termine = (match.score1 > 0 || match.score2 > 0) ? "oui" : "non";
         System.out.println(termine);
 
-        // Create the SQL query using placeholders
         String query = "UPDATE matchs SET equipe1 = ?, equipe2 = ?, score1 = ?, score2 = ?, termine = ? WHERE id_match = ?";
 
         try (PreparedStatement ps = statement.getConnection().prepareStatement(query)) {
-            // Set the values dynamically using the PreparedStatement
             ps.setInt(1, match.eq1);      // Set equipe1
             ps.setInt(2, match.eq2);      // Set equipe2
             ps.setInt(3, match.score1);   // Set score1
@@ -436,10 +416,8 @@ public class TournoiDAO {
             ps.setString(5, termine);     // Set termine ("oui" or "non")
             ps.setInt(6, match.idmatch);  // Set the match ID
 
-            // Execute the update
             ps.executeUpdate();
         } catch (SQLException e) {
-            // Improved error handling with message context
             System.out.println("Erreur lors de la mise à jour du match (ID: " + match.idmatch + "): " + e.getMessage());
             e.printStackTrace();
         }
@@ -455,25 +433,20 @@ public class TournoiDAO {
              PreparedStatement psDeleteEquipe = statement.getConnection().prepareStatement(queryDeleteEquipe);
              PreparedStatement psUpdateEquipes = statement.getConnection().prepareStatement(queryUpdateEquipes)) {
 
-            // Set parameters for the SELECT query to get the num_equipe
             psGetNumEquipe.setInt(1, idEquipe);
             ResultSet rs = psGetNumEquipe.executeQuery();
 
             if (rs.next()) {
-                int numeq = rs.getInt(1);  // Get the current num_equipe
+                int numeq = rs.getInt(1);
                 rs.close();
-
-                // Delete the team
                 psDeleteEquipe.setInt(1, tournoi.getId());
                 psDeleteEquipe.setInt(2, idEquipe);
                 psDeleteEquipe.executeUpdate();
 
-                // Update other teams' num_equipe values
                 psUpdateEquipes.setInt(1, tournoi.getId());
                 psUpdateEquipes.setInt(2, numeq);
                 psUpdateEquipes.executeUpdate();
 
-                // Refresh data after the update
                 tournoi.updateData();
             } else {
                 System.out.println("Equipe non trouvée (ID: " + idEquipe + ")");
@@ -485,7 +458,17 @@ public class TournoiDAO {
         }
     }
 
-
+    public void updateEquipe(int index, Tournoi tournoi) {
+        try {
+            String req = "UPDATE equipes SET nom_j1 = '" + mysql_real_escape_string(tournoi.getEquipe(index).eq1) + "', nom_j2 = '" + mysql_real_escape_string(tournoi.getEquipe(index).eq2) + "' WHERE id_equipe = " + tournoi.getEquipe(index).id + ";";
+            statement.executeUpdate(req);
+            tournoi.updateData();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     // Basic escaping method for strings to avoid SQL injection (use carefully)
     public static String mysql_real_escape_string( String str) throws Exception {
         if (str == null) {

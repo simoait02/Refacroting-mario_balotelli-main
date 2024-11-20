@@ -1,9 +1,12 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Properties;
 import java.util.Scanner;
 
 public class DatabaseManager {
@@ -11,11 +14,11 @@ public class DatabaseManager {
     private Connection connection;
     private Statement statement;
 
-    private DatabaseManager() throws SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException {
+    private DatabaseManager() throws SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, IOException {
         initializeConnection();
     }
 
-    public static DatabaseManager getInstance() throws SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException {
+    public static DatabaseManager getInstance() throws SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, IOException {
         if (instance == null) {
             synchronized (DatabaseManager.class) {
                 if (instance == null) {
@@ -26,19 +29,26 @@ public class DatabaseManager {
         return instance;
     }
 
+    private void initializeConnection() throws SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException, IOException {
+        Properties properties = new Properties();
 
-    private void initializeConnection() throws SQLException, ClassNotFoundException, InstantiationException, IllegalAccessException {
-        Class.forName("org.hsqldb.jdbcDriver").newInstance();
-
-        String storagePath = System.getenv("APPDATA") + "\\jBelote";
-        File storageDir = new File(storagePath);
-        if (!storageDir.isDirectory()) {
-            storageDir.mkdir();
+        // Load properties from the classpath
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("belote.properties")) {
+            if (input == null) {
+                throw new IOException("Unable to find belote.properties");
+            }
+            properties.load(input);
         }
 
-        System.out.println("Storage Directory: " + storagePath);
+        // Load JDBC driver
+        Class.forName("org.hsqldb.jdbcDriver").newInstance();
 
-        connection = DriverManager.getConnection("jdbc:hsqldb:file:" + storagePath + "\\belote", "sa", "");
+        // Get database connection details from properties
+        String dbUrl = properties.getProperty("db.url");
+        String dbUsername = properties.getProperty("db.username");
+        String dbPassword = properties.getProperty("db.password");
+
+        connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
         statement = connection.createStatement();
     }
 
