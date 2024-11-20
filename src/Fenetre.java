@@ -2,29 +2,27 @@ import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.Serial;
 import java.sql.*;
 import java.util.Vector;
 
 public class Fenetre extends JFrame {
+	@Serial
 	private static final long serialVersionUID = 1L;
 
-	// UI Components
 	private JPanel cardPanel;
 	private JLabel statutSelect;
 	private JButton btnTournois, btnParams, btnEquipes, btnTours, btnMatchs, btnResultats;
 
 	private JList<String> list;
-	private JButton creerTournoi, selectTournoi, deleteTournoi;
+    private JButton selectTournoi;
+    private JButton deleteTournoi;
 
-	// Database Statement
 	private final Statement statement;
 
-	// Tournament Information
 	private Tournoi currentTournoi;
 
-	// Constants
 	private static final int BUTTON_WIDTH = 100;
 	private static final int BUTTON_HEIGHT = 30;
 	private static final String DEFAULT_STATUT = "Statut : ";
@@ -213,10 +211,10 @@ public class Fenetre extends JFrame {
 
 	private void setupTournamentButtons(JPanel tournamentPanel,Vector<String> tournamentNames) {
 		JPanel buttonPanel = new JPanel();
-		creerTournoi = createActionButton("Créer un nouveau tournoi", e -> {
-			Tournoi.creerTournoi(statement);
-			tracerSelectTournoi();
-		}, buttonPanel);
+        JButton creerTournoi = createActionButton("Créer un nouveau tournoi", e -> {
+            Tournoi.creerTournoi(statement);
+            tracerSelectTournoi();
+        }, buttonPanel);
 
 		selectTournoi = createActionButton("Sélectionner le tournoi", e -> {
 			String selectedTournament = list.getSelectedValue();
@@ -265,7 +263,7 @@ public class Fenetre extends JFrame {
 		updateButtonStates();
 
 		if (equipes_trace) {
-			currentTournoi.majEquipes();
+			currentTournoi.updateEquipe();
 			eq_modele.fireTableDataChanged();
 		} else {
 			equipes_trace = true;
@@ -278,6 +276,7 @@ public class Fenetre extends JFrame {
 			eq_p.add(eq_desc);
 
 			eq_modele = new AbstractTableModel() {
+				@Serial
 				private static final long serialVersionUID = 1L;
 
 				@Override
@@ -417,7 +416,7 @@ public class Fenetre extends JFrame {
 			detailt_statut.setText(currentTournoi.getNStatut());
 			detailt_nbtours.setText(Integer.toString(currentTournoi.getNbTours()));
 		} else {
-			details_trace = true;
+			details_trace = false;
 
 			JPanel detailsPanel = new JPanel();
 			detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
@@ -446,13 +445,12 @@ public class Fenetre extends JFrame {
 			((CardLayout) cardPanel.getLayout()).show(cardPanel, "DETAIL");
 		}
 	}
-	JTable                     tours_t;
-	JScrollPane                tours_js;
-	JPanel                     tours_p;
+	JTable tours_t;
+	JScrollPane tours_js;
+	JPanel tours_p;
 
-	JButton                    tours_ajouter;
-	JButton                    tours_supprimer;
-	JButton                    tours_rentrer;
+	JButton tours_ajouter;
+	JButton tours_supprimer;
 	boolean tours_trace;
 
 	public void tracerToursTournoi() {
@@ -549,11 +547,11 @@ public class Fenetre extends JFrame {
 
 
 	private AbstractTableModel match_modele;
-	private JScrollPane        match_js;
-	JTable                     match_jt;
-	JPanel                     match_p;
-	JLabel                     match_statut;
-	JButton                    match_valider;
+	private JScrollPane match_js;
+	JTable match_jt;
+	JPanel match_p;
+	JLabel match_statut;
+	JButton match_valider;
 	private boolean match_trace = false;
 	public void tracerMatchsTournoi() {
 		if (currentTournoi == null) {
@@ -678,20 +676,20 @@ public class Fenetre extends JFrame {
 
 		footer.add(match_statut);
 		footer.add(match_valider);
-
+		match_valider.addActionListener(e -> tracerResultatsTournoi());
 		return footer;
 	}
 
 	private void switchToMatchView() {
 		((CardLayout) cardPanel.getLayout()).show(cardPanel, "MATCHS");
 	}
-	private JScrollPane        resultats_js;
-	JTable                     resultats_jt;
-	JPanel                     resultats_p;
-	BoxLayout                  resultats_layout;
-	JLabel                     resultats_desc;
-	JPanel                     resultats_bas;
-	JLabel                     resultats_statut;
+	private JScrollPane resultats_js;
+	JTable resultats_jt;
+	JPanel resultats_p;
+	BoxLayout resultats_layout;
+	JLabel resultats_desc;
+	JPanel resultats_bas;
+	JLabel resultats_statut;
 	private boolean resultats_trace=false;
 	public void tracerResultatsTournoi(){
 		if(currentTournoi == null){
@@ -729,7 +727,7 @@ public class Fenetre extends JFrame {
 			resultats_js.setViewportView(resultats_jt);
 		}else{
 			resultats_trace = true;
-			resultats_p      = new JPanel();
+			resultats_p = new JPanel();
 			resultats_layout = new BoxLayout(resultats_p, BoxLayout.Y_AXIS);
 
 			resultats_p.setLayout(resultats_layout);
