@@ -176,7 +176,9 @@ public class Tournoi {
 	public void ajouterEquipe() {
 		tournoiDAO.ajouterEquipe("\"Joueur 1\"", "\"Joueur 2\"", this);
 	}
-
+	public void updateEquipe(int index){
+		tournoiDAO.updateEquipe(index,this);
+	}
 	public void updateMatch(int index) {
 		tournoiDAO.updateMatch(index, this);
 		updateData();

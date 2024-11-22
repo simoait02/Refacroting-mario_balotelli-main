@@ -384,11 +384,10 @@ public class TournoiDAO {
 
         String query = "INSERT INTO equipes (id_equipe, num_equipe, id_tournoi, nom_j1, nom_j2) VALUES (NULL, ?, ?, ?, ?)";
         try (PreparedStatement ps = statement.getConnection().prepareStatement(query)) {
-            // Set the values dynamically
-            ps.setInt(1, a_aj);                // Set the team number
-            ps.setInt(2, tournoi.getId());           // Set the tournament ID
-            ps.setString(3, joueur1);          // Set player 1 name
-            ps.setString(4, joueur2);          // Set player 2 name
+            ps.setInt(1, a_aj);
+            ps.setInt(2, tournoi.getId());
+            ps.setString(3, joueur1);
+            ps.setString(4, joueur2);
 
             // Execute the update
             ps.executeUpdate();
@@ -409,12 +408,12 @@ public class TournoiDAO {
         String query = "UPDATE matchs SET equipe1 = ?, equipe2 = ?, score1 = ?, score2 = ?, termine = ? WHERE id_match = ?";
 
         try (PreparedStatement ps = statement.getConnection().prepareStatement(query)) {
-            ps.setInt(1, match.eq1);      // Set equipe1
-            ps.setInt(2, match.eq2);      // Set equipe2
-            ps.setInt(3, match.score1);   // Set score1
-            ps.setInt(4, match.score2);   // Set score2
-            ps.setString(5, termine);     // Set termine ("oui" or "non")
-            ps.setInt(6, match.idmatch);  // Set the match ID
+            ps.setInt(1, match.eq1);
+            ps.setInt(2, match.eq2);
+            ps.setInt(3, match.score1);
+            ps.setInt(4, match.score2);
+            ps.setString(5, termine);
+            ps.setInt(6, match.idmatch);
 
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -424,7 +423,6 @@ public class TournoiDAO {
 
     }
     public void supprimerEquipe(int idEquipe,Tournoi tournoi) {
-        // Query to get the current num_equipe of the team to delete
         String queryGetNumEquipe = "SELECT num_equipe FROM equipes WHERE id_equipe = ?";
         String queryDeleteEquipe = "DELETE FROM equipes WHERE id_tournoi = ? AND id_equipe = ?";
         String queryUpdateEquipes = "UPDATE equipes SET num_equipe = num_equipe - 1 WHERE id_tournoi = ? AND num_equipe > ?";
@@ -469,7 +467,6 @@ public class TournoiDAO {
             e.printStackTrace();
         }
     }
-    // Basic escaping method for strings to avoid SQL injection (use carefully)
     public static String mysql_real_escape_string( String str) throws Exception {
         if (str == null) {
             return null;
